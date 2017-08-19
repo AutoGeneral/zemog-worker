@@ -114,7 +114,7 @@ Something like:
 ### zemog.json
 
 E2E tests must have one and only one `zemog.json` file at the top level (usually `/test` folder) 
-where you can define multiple tests with independent Iridium launch configuration.
+where you can define multiple tests with independent [Iridium launch configuration](https://autogeneral.gitbooks.io/iridiumapplicationtesting-gettingstartedguide/content/system_property_reference.html).
 
 Use `./` in paths and it will be replaced by an absolute paths to your tests folder. For example,
 `./feature/login/` will be replaced by something like `/tmp/zemog-temp-folder-12215124/app-tests/feature/login/`
