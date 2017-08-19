@@ -4,8 +4,8 @@ Zemog Worker is a part of distributed two-tier system to run scheduled automated
 [Iridium](https://github.com/AutoGeneral/IridiumApplicationTesting) E2E tests at scale.
 
 System consists of two parts:
-- master (AWS Lambda) that schedules tests by adding tasks to AWS SQS
-- worker (Node.js app) that gets tasks from the queue, downloads latest test from S3 bucket
+- [master](https://github.com/AutoGeneral/zemog-master) (AWS Lambda) that schedules tests by adding tasks to AWS SQS
+- [worker](https://github.com/AutoGeneral/zemog-worker) (Node.js app) that gets tasks from the queue, downloads latest test from S3 bucket
 and executes them. It is also responsible for sending notifications about failing tests
 and save failed results to S3 bucket
 
