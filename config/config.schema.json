@@ -1,0 +1,153 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Configuration",
+  "description": "Configuration object for Zemog Worker",
+  "type": "object",
+  "properties": {
+    "iridiumPath": {
+      "description": "Path to Iridium .jar file",
+      "type": "string"
+    },
+    "iridiumLaunchParameters": {
+      "description": "Iridium parameters that will be passed to all tests",
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "queueName": {
+      "description": "Name of the SQS queue to read job messages from, eg. 'Zemog'",
+      "type": "string"
+    },
+    "daysToKeepTestResult": {
+      "description": "Number of days test result should be available in S3 bucket",
+      "type": "number"
+    },
+    "logs": {
+      "type": "object",
+      "description": "This object will be passed to Winston logging library during a configuration phase",
+      "properties": {
+        "level": {
+          "description": "Log level",
+          "type": "string"
+        },
+        "file": {
+          "description": "Path for log file (default: ./tmp/worker.log)",
+          "type": "string"
+        },
+        "isJson": {
+          "description": "If specified, will use JSON format for log file",
+          "type": "boolean"
+        }
+      }
+    },
+    "aws": {
+      "type": "object",
+      "description": "This object will be passed to AWS SDK constructors",
+      "properties": {
+        "region": {
+          "description": "AWS region, eg. 'ap-southeast-2'",
+          "type": "string"
+        },
+        "testResultPath": {
+          "type": "object",
+          "description": "Path to a folder in S3 to store tests results",
+          "properties": {
+            "bucket": {
+              "description": "Name of S3 bucket, eg: ag-online-sandbox",
+              "type": "string"
+            },
+            "key": {
+              "description": "Path in S3, eg: tests/result/",
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "debug": {
+      "type": "object",
+      "description": "Debug parameters, should not be enabled in production",
+      "properties": {
+        "doNotDeleteMessagesInQueue": {
+          "description": "If set to true - worker will not delete message from the queue",
+          "type": "boolean"
+        },
+        "useMockedQueueMessage": {
+          "description": "If set to true - worker will use mocked message (see queue.js)",
+          "type": "boolean"
+        }
+      }
+    },
+    "notifications": {
+      "type": "object",
+      "description": "Notification details for different channels",
+      "properties": {
+        "victorOps": {
+          "type": "object",
+          "description": "VictorOps notification details",
+          "properties": {
+            "isEnabled": {
+              "description": "Should we send notifications about failed tests to VictorOps?",
+              "type": "boolean"
+            },
+            "url": {
+              "description": "VictorOps REST API URL",
+              "type": "string"
+            },
+            "messageType": {
+              "description": "Message type for alert message - WARNING, INFO, ERROR etc",
+              "type": "string"
+            },
+            "entity": {
+              "description": "Entity prefix to identify the alert",
+              "type": "string"
+            }
+          },
+          "required": [
+            "isEnabled",
+            "url",
+            "entity",
+            "messageType"
+          ]
+        },
+        "clickatell": {
+          "type": "object",
+          "description": "VictorOps notification details",
+          "properties": {
+            "isEnabled": {
+              "description": "Should we send notifications or not",
+              "type": "boolean"
+            },
+            "authorizationToken": {
+              "description": "Authorisation token required by Clickatell API",
+              "type": "string"
+            },
+            "recipients": {
+              "description": "List of phone numbers to send SMS to",
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "uniqueItems": true
+            },
+            "from": {
+              "description": "Sender ID, you have to authorise that in Clickatell account",
+              "type": "string"
+            }
+          },
+          "required": [
+            "isEnabled",
+            "authorizationToken",
+            "recipients"
+          ]
+        }
+      }
+    }
+  },
+  "required": [
+    "queueName",
+    "iridiumPath"
+  ]
+}

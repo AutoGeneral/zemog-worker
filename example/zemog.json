@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "AdminOpenPageTest": {
+    "launchParameters": [
+      "-DimportBaseUrl=./",
+      "-DtestSource=example.feature",
+      "-DtestRetryCount=2",
+      "-DtestDestination=PHANTOMJS",
+      "-DsaveReportsInHomeDir=false",
+      "-DappURLOverride=https://secure.budgetdirect.com.au/admin/index.jsp?hSty=BUDD"
+    ]
+  }
+}

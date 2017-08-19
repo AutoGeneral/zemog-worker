@@ -1,0 +1,55 @@
+{
+  "logs": {
+    "level": "debug",
+    "isJson": false
+  },
+  "aws": {
+    "region": "ap-southeast-2",
+    "testResultPath": {
+      "bucket": "zemog-bucket",
+      "key": "tests/result/"
+    }
+  },
+  "debug": {
+    "doNotDeleteMessagesInQueue": true,
+    "useMockedQueueMessage": true
+  },
+  "queueName": "zemog-task-queue",
+  "iridiumPath": "./iridium/IridiumApplicationTesting.jar",
+  "iridiumLaunchParameters": [
+    "-DenableScreenshotOnError=true"
+  ],
+  "daysToKeepTestResult": 1,
+  "notifications": {
+    "frontend": {
+      "victorOps": {
+        "isEnabled": false,
+        "url": "https://alert.victorops.com/integrations/generic/20131114/alert/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx/Frontend",
+        "messageType": "INFO",
+        "entity": "Iridium Test/Localhost"
+      },
+      "clickatell": {
+        "isEnabled": false,
+        "authorizationToken": "FAKE.TOKEN.TOKEN.TOKEN",
+        "recipients": [
+          "+61400000000"
+        ]
+      }
+    },
+    "backend": {
+      "victorOps": {
+        "isEnabled": false,
+        "url": "https://alert.victorops.com/integrations/generic/20131114/alert/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx/Backend",
+        "messageType": "INFO",
+        "entity": "Iridium Test/Localhost"
+      },
+      "clickatell": {
+        "isEnabled": false,
+        "authorizationToken": "FAKE.TOKEN.TOKEN.TOKEN",
+        "recipients": [
+          "+61400000000"
+        ]
+      }
+    }
+  }
+}
