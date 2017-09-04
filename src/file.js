@@ -8,8 +8,8 @@ const decompress = require('decompress');
 const archiver = require('archiver');
 const rimraf = require('rimraf');
 const moment = require('moment');
+const readDir = require('recursive-readdir');
 const {FileOperationError, TestNotFound, TestResultNotUploaded} = require('./errors');
-
 
 class File {
 
@@ -22,7 +22,7 @@ class File {
 		this._debug = debugParams;
 		this._s3 = new AWS.S3(this._config.aws || {});
 		this._tmpRootFolder = path.join(os.tmpdir(), 'zemog');
-		this._testResultPath = (this._config.aws.testResultPath || {bucket: 'ag-online-zemog', key: 'tests/result/'});
+		this._testResultPath = (this._config.aws.testResultPath || {bucket: 'zemog-bucket', key: 'tests/result/'});
 		this._daysToKeepTestResult = (this._config.daysToKeepTestResult || 7);
 	}
 
@@ -141,10 +141,7 @@ class File {
 		assert(archiveName, 'src (type String) parameter must be passed');
 		assert(src, 'src (type String) parameter must be passed');
 
-		// we have to replace ':' in ISO date format as Windows
-		// freaks out if that symbol included to a filename
-		const testResultFile = `TestResult-${archiveName}-${new Date().toISOString().replace(/:/g, '-')}.zip`;
-		const tmpArchiveFilename = path.join(os.tmpdir(), testResultFile);
+		const tmpArchiveFilename = path.join(os.tmpdir(), `${archiveName}.zip`);
 		logger.debug(`Archiving tests results folder: ${src}. Archive: ${tmpArchiveFilename}`);
 
 		const output = fs.createWriteStream(tmpArchiveFilename);
@@ -165,48 +162,65 @@ class File {
 			output.on('close', err => {
 				if (err) return reject(err);
 				logger.debug(archive.pointer() + ' bytes archive has been finalised, archive created');
-				resolve(tmpArchiveFilename);
+				resolve({archiveName, src, tmpArchiveFilename});
 			});
 		});
 	}
 
 	/**
 	 * Upload Test Result to S3 bucket
-	 * @param {String} tmpArchiveFullName
 	 * @returns {Promise<String>|undefined} data
 	 */
-	uploadTestResult (tmpArchiveFullName) {
-		if (fs.existsSync(tmpArchiveFullName)) {
+	uploadTestResult ({archiveName, src, tmpArchiveFilename}) {
+		if (fs.existsSync(src)) {
+
 			const date = new Date();
 			date.setDate(date.getDate() + this._daysToKeepTestResult);
 
-			logger.debug(`Uploading ${tmpArchiveFullName} to S3 bucket`);
-			const params = {
-				Bucket: this._testResultPath.bucket,
-				Key: this._testResultPath.key + path.basename(tmpArchiveFullName),
-				Body: fs.readFileSync(tmpArchiveFullName),
-				Expires: date.toISOString()
-			};
-			return this._s3.putObject(params).promise()
-				.then(() => {
-					logger.debug(`Successfully uploaded ${tmpArchiveFullName} to S3 bucket`);
-					// Remove zip file from the current folder
-					rimraf.sync(tmpArchiveFullName);
-					return path.basename(tmpArchiveFullName);
-				})
-				.catch(err => {
-					logger.error(err);
-					// S3 API will return that code so we can rethrow it to make it clear for user
-					if (err.code === 'NoSuchKey') {
-						throw new TestResultNotUploaded(`Test Result ${tmpArchiveFullName} can't be uploaded to S3 bucket`
-							, err.stack);
-					}
-					throw new Error(err);
-				});
-		}
-		else {
-			logger.debug('No archive created because all test cases passed');
-			return undefined;
+			const folderToUpload = `${this._testResultPath.key}${archiveName}-${new Date().toISOString().replace(/:/g, '-')}`;
+
+			return new Promise(resolve => {
+				readDir(src)
+					.then(files => {
+						Promise.all(
+							files.map(file => {
+								const params = {
+									Bucket: this._testResultPath.bucket,
+									Key: `${folderToUpload}/html/${path.relative(src, file)}`,
+									Body: fs.createReadStream(file),
+									Expires: date.toISOString()
+								};
+
+								logger.debug(`Uploading to S3`, {key: params.Key, bucket: params.Bucket, expires: params.Expires});
+
+								return this._s3.putObject(params).promise();
+							})
+						).then(() => {
+							const params = {
+								Bucket: this._testResultPath.bucket,
+								Key: `${folderToUpload}/${path.basename(tmpArchiveFilename)}`,
+								Body: fs.createReadStream(tmpArchiveFilename),
+								Expires: date.toISOString()
+							};
+
+							logger.debug(`Uploading to S3`, {key: params.Key, bucket: params.Bucket, expires: params.Expires});
+
+							return this._s3.putObject(params).promise();
+						})
+						.then(() => resolve(folderToUpload))
+						.catch(err => {
+							logger.error(err);
+
+							// S3 API will return that code so we can rethrow it to make it clear for user
+							if (err.code === 'NoSuchKey') {
+								throw new TestResultNotUploaded(`Test Result ${tmpArchiveFilename} can't be uploaded to S3 bucket`
+									, err.stack);
+							}
+
+							throw new Error(err);
+						});
+					})
+			});
 		}
 	}
 }

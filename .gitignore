@@ -97,5 +97,3 @@ fabric.properties
 tmp
 /*.xml
 iridium/*.jar
-
-.idea

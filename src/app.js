@@ -101,17 +101,17 @@ class Application {
 				testResultArchiveFile = _testResultArchiveFile;
 				return file.uploadTestResult(testResultArchiveFile);
 			})
-			.then(data => {
-				if (data && testTask.notifications) {
+			.then(resultPath => {
+				if (resultPath && testTask.notifications) {
 					testTask.notifications.forEach((notificationCode) => {
 						let notification = this._config.notifications[notificationCode];
 						if (!notification) return;
 						notification.aws = this._config.aws;
 						if ((notification.victorOps || {}).isEnabled) {
-							(new VictorOps(notification)).sendNotification(appName, testName, path.basename(testResultArchiveFile));
+							(new VictorOps(notification)).sendNotification(appName, testName, `${resultPath}/CucumberThread2.html/index.html`);
 						}
 						if ((notification.clickatell || {}).isEnabled) {
-							(new Clickatell(notification)).sendNotification(appName, testName, path.basename(testResultArchiveFile));
+							(new Clickatell(notification)).sendNotification(appName, testName, `${resultPath}/CucumberThread2.html/index.html`);
 						}
 					});
 				}
