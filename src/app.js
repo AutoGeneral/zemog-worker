@@ -98,8 +98,12 @@ class Application {
 				}
 			})
 			.then(_testResultArchiveFile => {
-				testResultArchiveFile = _testResultArchiveFile;
-				return file.uploadTestResult(testResultArchiveFile);
+				if (_testResultArchiveFile) {
+					testResultArchiveFile = _testResultArchiveFile;
+					return file.uploadTestResult(testResultArchiveFile);
+				}
+
+				return Promise.resolve(void 0);
 			})
 			.then(resultPath => {
 				if (resultPath && testTask.notifications) {
