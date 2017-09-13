@@ -11,6 +11,8 @@ class VictorOps {
 	constructor (config = {}) {
 		this._config = config.victorOps || {};
 		this._testResultPath = (config.aws || {}).testResultPath || {};
+		this._awsRegion = (config.aws || {}).region || 'ap-southeast-2';
+
 		assert(this._config.url, 'victorOps.url (string) config property is required');
 	}
 
@@ -26,7 +28,7 @@ class VictorOps {
 			'Iridium Test failed',
 			appName,
 			testName,
-			's3://' + this._testResultPath.bucket + '/' + this._testResultPath.key + src
+			'https://s3-' + this._awsRegion + '.amazonaws.com/' + this._testResultPath.bucket + '/' + src
 		].join(' - ');
 
 		const options = {

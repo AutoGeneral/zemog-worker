@@ -9,6 +9,7 @@ const archiver = require('archiver');
 const rimraf = require('rimraf');
 const moment = require('moment');
 const readDir = require('recursive-readdir');
+const mimeType = require('mime-types');
 const {FileOperationError, TestNotFound, TestResultNotUploaded} = require('./errors');
 
 class File {
@@ -22,7 +23,7 @@ class File {
 		this._debug = debugParams;
 		this._s3 = new AWS.S3(this._config.aws || {});
 		this._tmpRootFolder = path.join(os.tmpdir(), 'zemog');
-		this._testResultPath = (this._config.aws.testResultPath || {bucket: 'zemog-bucket', key: 'tests/result/'});
+		this._testResultPath = (this._config.aws.testResultPath || {bucket: 'zemog-bucket', key: 'results/'});
 		this._daysToKeepTestResult = (this._config.daysToKeepTestResult || 7);
 	}
 
@@ -158,7 +159,7 @@ class File {
 		// finalize the archive (ie we are done appending files but streams have to finish yet)
 		archive.finalize();
 
-		return new Promise ((resolve, reject) => {
+		return new Promise((resolve, reject) => {
 			output.on('close', err => {
 				if (err) return reject(err);
 				logger.debug(archive.pointer() + ' bytes archive has been finalised, archive created');
@@ -178,6 +179,8 @@ class File {
 			date.setDate(date.getDate() + this._daysToKeepTestResult);
 
 			const folderToUpload = `${this._testResultPath.key}${archiveName}-${new Date().toISOString().replace(/:/g, '-')}`;
+			const htmlOutputFolder = `${folderToUpload}/html`;
+			let cucumberResult;
 
 			return new Promise(resolve => {
 				readDir(src)
@@ -186,39 +189,59 @@ class File {
 							files.map(file => {
 								const params = {
 									Bucket: this._testResultPath.bucket,
-									Key: `${folderToUpload}/html/${path.relative(src, file)}`,
+									Key: `${htmlOutputFolder}/${path.relative(src, file)}`,
 									Body: fs.createReadStream(file),
-									Expires: date.toISOString()
+									Expires: date.toISOString(),
+									ContentType: mimeType.lookup(file),
+									ACL: 'public-read'
 								};
 
-								logger.debug(`Uploading to S3`, {key: params.Key, bucket: params.Bucket, expires: params.Expires});
+								if (params.ContentType == false) {
+									delete params.ContentType;
+								}
+
+								logger.debug(`Uploading to S3`, {
+									key: params.Key,
+									bucket: params.Bucket,
+									expires: params.Expires
+								});
+
+								if (/CucumberThread[0-9]+\.html\/index\.html/.test(file)) {
+									cucumberResult = `${path.dirname(file).split(path.sep).slice(-1)[0]}/index.html`;
+								}
 
 								return this._s3.putObject(params).promise();
 							})
-						).then(() => {
-							const params = {
-								Bucket: this._testResultPath.bucket,
-								Key: `${folderToUpload}/${path.basename(tmpArchiveFilename)}`,
-								Body: fs.createReadStream(tmpArchiveFilename),
-								Expires: date.toISOString()
-							};
+							)
+							// Then finally upload the zip archive too.
+							.then(() => {
+								const params = {
+									Bucket: this._testResultPath.bucket,
+									Key: `${folderToUpload}/${path.basename(tmpArchiveFilename)}`,
+									Body: fs.createReadStream(tmpArchiveFilename),
+									Expires: date.toISOString()
+								};
 
-							logger.debug(`Uploading to S3`, {key: params.Key, bucket: params.Bucket, expires: params.Expires});
+								logger.debug(`Uploading to S3`, {
+									key: params.Key,
+									bucket: params.Bucket,
+									expires: params.Expires
+								});
 
-							return this._s3.putObject(params).promise();
-						})
-						.then(() => resolve(folderToUpload))
-						.catch(err => {
-							logger.error(err);
+								return this._s3.putObject(params).promise();
+							})
+							.then(() => resolve(`${htmlOutputFolder}/${cucumberResult}`))
+							.catch(err => {
+								logger.error(err);
 
-							// S3 API will return that code so we can rethrow it to make it clear for user
-							if (err.code === 'NoSuchKey') {
-								throw new TestResultNotUploaded(`Test Result ${tmpArchiveFilename} can't be uploaded to S3 bucket`
-									, err.stack);
-							}
+								// S3 API will return that code so we can rethrow it to make it clear for user
+								if (err.code === 'NoSuchKey') {
+									throw new TestResultNotUploaded(`Test Result ${tmpArchiveFilename} can't be uploaded to S3 bucket`
+										, err.stack);
+								}
 
-							throw new Error(err);
-						});
+								throw new Error(err);
+							});
 					})
 			});
 		}

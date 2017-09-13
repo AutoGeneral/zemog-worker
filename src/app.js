@@ -109,13 +109,15 @@ class Application {
 				if (resultPath && testTask.notifications) {
 					testTask.notifications.forEach((notificationCode) => {
 						let notification = this._config.notifications[notificationCode];
+
 						if (!notification) return;
 						notification.aws = this._config.aws;
+
 						if ((notification.victorOps || {}).isEnabled) {
-							(new VictorOps(notification)).sendNotification(appName, testName, `${resultPath}/CucumberThread2.html/index.html`);
+							(new VictorOps(notification)).sendNotification(appName, testName, resultPath);
 						}
 						if ((notification.clickatell || {}).isEnabled) {
-							(new Clickatell(notification)).sendNotification(appName, testName, `${resultPath}/CucumberThread2.html/index.html`);
+							(new Clickatell(notification)).sendNotification(appName, testName, resultPath);
 						}
 					});
 				}
